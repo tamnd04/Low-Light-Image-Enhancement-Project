@@ -235,7 +235,3 @@ This project is released under the same license as the original RetinexFormer (M
 
 This work is based on [RetinexFormer](https://github.com/caiyuanhao1998/Retinexformer) by Yuanhao Cai et al. We extend our gratitude to the original authors for their excellent work and open-source contribution.
 
----
-
-**Original README**: See [README_original.md](README_original.md) for the complete original RetinexFormer documentation.
-
