@@ -1,53 +1,67 @@
-# ignored folders
-/data
-experiments
-results
-tb_logger
-wandb
-tmp
-pretrained_weights
-
-basicsr.egg-info/*
-
-*pyc
-
-docs/api
-scripts/__init__.py
-
-*.DS_Store
-.idea
-
-
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+.eggs/
+dist/
+build/
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+# Virtual Environments
+env/
+venv/
+ENV/
+.conda/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Experiments and Results
+experiments/*/
+!experiments/.gitkeep
+results/*/
+!results/.gitkeep
+tb_logger/*/
+!tb_logger/.gitkeep
+
+# Data
+data/*/
+!data/.gitkeep
+
+# Pretrained Weights
+pretrained_weights/*.pth
+!pretrained_weights/.gitkeep
+
+# Enhanced Outputs
+Enhancement/enhanced_HCMC_output/
+Enhancement/results/*/
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+tmp/
+wandb/
+
+# Docs
+docs/api/
+
+# Build artifacts
+basicsr.egg-info/
 *.manifest
 *.spec
 

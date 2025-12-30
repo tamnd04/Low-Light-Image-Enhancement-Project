@@ -5,8 +5,14 @@
 # https://github.com/caiyuanhao1998/Retinexformer
 
 from ast import arg
-import numpy as np
+import sys
 import os
+
+# Add project root to Python path to skip installation
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+import numpy as np
 import argparse
 from tqdm import tqdm
 import cv2
@@ -71,10 +77,18 @@ parser.add_argument('--self_ensemble', action='store_true', help='Use self-ensem
 
 args = parser.parse_args()
 
-# 指定 gpu
+# GPU setup
 gpu_list = ','.join(str(x) for x in args.gpus)
 os.environ['CUDA_VISIBLE_DEVICES'] = gpu_list
 print('export CUDA_VISIBLE_DEVICES=' + gpu_list)
+
+# Use GPU if available, otherwise CPU
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+    print(f'Running on GPU: {torch.cuda.get_device_name(0)}')
+else:
+    device = torch.device('cpu')
+    print('Running on CPU')
 
 ####### Load yaml #######
 yaml_file = args.opt
@@ -111,7 +125,7 @@ except:
     model_restoration.load_state_dict(new_checkpoint)
 
 print("===>Testing using weights: ", weights)
-model_restoration.cuda()
+model_restoration.to(device)  # Use CPU instead of .cuda()
 model_restoration = nn.DataParallel(model_restoration)
 model_restoration.eval()
 
@@ -153,10 +167,11 @@ if dataset in ['SID', 'SMID', 'SDSD_indoor', 'SDSD_outdoor']:
     dataloader = DataLoader(dataset=dataset, batch_size=1, shuffle=False)
     with torch.inference_mode():
         for data_batch in tqdm(dataloader):
-            torch.cuda.ipc_collect()
-            torch.cuda.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.ipc_collect()
+                torch.cuda.empty_cache()
 
-            input_ = data_batch['lq']
+            input_ = data_batch['lq'].to(device)
             input_save = data_batch['lq'].cpu().permute(
                 0, 2, 3, 1).squeeze(0).numpy()
             target = data_batch['gt'].cpu().permute(
@@ -206,6 +221,13 @@ else:
 
     input_dir = opt['datasets']['val']['dataroot_lq']
     target_dir = opt['datasets']['val']['dataroot_gt']
+    
+    # Fix relative paths when running from Enhancement directory
+    if not os.path.isabs(input_dir):
+        input_dir = os.path.join(project_root, input_dir)
+    if not os.path.isabs(target_dir):
+        target_dir = os.path.join(project_root, target_dir)
+    
     print(input_dir)
     print(target_dir)
 
@@ -218,14 +240,15 @@ else:
     with torch.inference_mode():
         for inp_path, tar_path in tqdm(zip(input_paths, target_paths), total=len(target_paths)):
 
-            torch.cuda.ipc_collect()
-            torch.cuda.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.ipc_collect()
+                torch.cuda.empty_cache()
 
             img = np.float32(utils.load_img(inp_path)) / 255.
             target = np.float32(utils.load_img(tar_path)) / 255.
 
             img = torch.from_numpy(img).permute(2, 0, 1)
-            input_ = img.unsqueeze(0).cuda()
+            input_ = img.unsqueeze(0).to(device)
 
             # Padding in case images are not multiples of 4
             b, c, h, w = input_.shape

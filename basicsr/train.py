@@ -3,6 +3,11 @@ import datetime
 import logging
 import math
 import os
+import sys
+
+# Add project root to Python path to skip installation
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
 
 import random
 import time
@@ -22,6 +27,7 @@ from basicsr.utils.misc import mkdir_and_rename2
 from basicsr.utils.options import dict2str, parse
 
 import numpy as np
+from tqdm import tqdm
 
 from pdb import set_trace as stx
 
@@ -251,6 +257,9 @@ def main():
     scale = opt['scale']
 
     epoch = start_epoch
+    
+    # Create progress bar for total iterations
+    pbar = tqdm(total=total_iters, initial=current_iter, desc='Training', unit='iter')
 
     while current_iter <= total_iters:
         train_sampler.set_epoch(epoch)
@@ -305,6 +314,9 @@ def main():
             model.optimize_parameters(current_iter)
 
             iter_time = time.time() - iter_time
+            # Update progress bar
+            pbar.update(1)
+            
             # log
             if current_iter % opt['logger']['print_freq'] == 0:
                 log_vars = {'epoch': epoch, 'iter': current_iter}
@@ -312,6 +324,10 @@ def main():
                 log_vars.update({'time': iter_time, 'data_time': data_time})
                 log_vars.update(model.get_current_log())
                 msg_logger(log_vars)
+                
+                # Update progress bar with current loss
+                loss_str = f"Loss: {model.get_current_log().get('l_pix', 0):.4f}"
+                pbar.set_postfix_str(loss_str)
 
             # save models and training states
             if current_iter % opt['logger']['save_checkpoint_freq'] == 0:
@@ -351,6 +367,9 @@ def main():
         epoch += 1
 
     # end of epoch
+    
+    # Close progress bar
+    pbar.close()
 
     consumed_time = str(
         datetime.timedelta(seconds=int(time.time() - start_time)))

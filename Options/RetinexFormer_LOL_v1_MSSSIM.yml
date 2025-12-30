@@ -1,8 +1,8 @@
-# general settings
-name: Enhancement_RetinexFormer_LOL_v1
+# Configuration for L1 + MS-SSIM Loss
+name: RetinexFormer_LOL_v1_MSSSIM
 model_type: ImageCleanModel
 scale: 1
-num_gpu: 1  # set num_gpu: 1 for GPU mode, 0 for CPU mode
+num_gpu: 1
 manual_seed: 100
 
 # dataset and data loader settings
@@ -20,17 +20,10 @@ datasets:
 
     # data loader
     use_shuffle: true
-    num_worker_per_gpu: 8  # Reduced to avoid paging file errors on Windows
-    batch_size_per_gpu: 16  # Increased batch size for better GPU utilization
-    pin_memory: true  # Faster data transfer to GPU
-    persistent_workers: true  # Keep workers alive between epochs
-
-    ### -------------Progressive training--------------------------
-    # mini_batch_sizes: [8,5,4,2,1,1]             # Batch size per gpu   
-    # iters: [46000,32000,24000,18000,18000,12000]
-    # gt_size: 384   # Max patch size for progressive training
-    # gt_sizes: [128,160,192,256,320,384]  # Patch sizes for progressive training.
-    # ### ------------------------------------------------------------
+    num_worker_per_gpu: 8
+    batch_size_per_gpu: 16
+    pin_memory: true
+    persistent_workers: true
 
     ### ------- Training on single fixed-patch size 128x128---------
     mini_batch_sizes: [8]   
@@ -40,7 +33,7 @@ datasets:
     ### ------------------------------------------------------------
 
     dataset_enlarge_ratio: 1
-    prefetch_mode: cuda  # Use CUDA prefetching for faster data loading
+    prefetch_mode: cuda
 
   val:
     name: ValSet
@@ -59,7 +52,6 @@ network_g:
   stage: 1
   num_blocks: [1,2,2]
 
-
 # path
 path:
   pretrain_network_g: ~
@@ -69,12 +61,9 @@ path:
 # training settings
 train:
   total_iter: 150000
-  warmup_iter: -1 # no warm up
+  warmup_iter: -1
   use_grad_clip: true
 
-  # Split 300k iterations into two cycles. 
-  # 1st cycle: fixed 3e-4 LR for 92k iters. 
-  # 2nd cycle: cosine annealing (3e-4 to 1e-6) for 208k iters.
   scheduler:
     type: CosineAnnealingRestartCyclicLR
     periods: [46000, 104000]       
@@ -89,14 +78,21 @@ train:
   optim_g:
     type: Adam
     lr: !!float 2e-4
-    # weight_decay: !!float 1e-4
     betas: [0.9, 0.999]
   
-  # losses
+  # L1 Loss
   pixel_opt:
     type: L1Loss
-    loss_weight: 1
+    loss_weight: 0.84  # α from paper
     reduction: mean
+
+  # MS-SSIM Loss with (1-α) weight
+  msssim_opt:
+    type: MS_SSIMLoss
+    loss_weight: 0.16  # (1-α) from paper
+    data_range: 1.0
+    size_average: true
+    channel: 3
 
 # validation settings
 val:
@@ -108,7 +104,7 @@ val:
   max_minibatch: 8
 
   metrics:
-    psnr: # metric name, can be arbitrary
+    psnr:
       type: calculate_psnr
       crop_border: 0
       test_y_channel: false

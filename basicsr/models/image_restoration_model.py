@@ -21,7 +21,7 @@ import torch.nn.functional as F
 from functools import partial
 
 try :
-    from torch.cuda.amp import autocast, GradScaler
+    from torch.amp import autocast, GradScaler
     load_amp = True
 except:
     load_amp = False
@@ -66,7 +66,8 @@ class ImageCleanModel(BaseModel):
 
         # define mixed precision
         self.use_amp = opt.get('use_amp', False) and load_amp
-        self.amp_scaler = GradScaler(enabled=self.use_amp)
+        device_type = 'cuda' if opt['num_gpu'] > 0 else 'cpu'
+        self.amp_scaler = GradScaler(device_type, enabled=self.use_amp)
         if self.use_amp:
             print('Using Automatic Mixed Precision')
         else:
@@ -127,6 +128,22 @@ class ImageCleanModel(BaseModel):
                 self.device)      #如何写 weighted loss 呢？传参构造Loss函数
         else:
             raise ValueError('pixel loss are None.')
+        
+        # Perceptual loss
+        if train_opt.get('perceptual_opt'):
+            percep_type = train_opt['perceptual_opt'].pop('type')
+            cri_percep_cls = getattr(loss_module, percep_type)
+            self.cri_perceptual = cri_percep_cls(**train_opt['perceptual_opt']).to(self.device)
+        else:
+            self.cri_perceptual = None
+        
+        # MS-SSIM loss
+        if train_opt.get('msssim_opt'):
+            msssim_type = train_opt['msssim_opt'].pop('type')
+            cri_msssim_cls = getattr(loss_module, msssim_type)
+            self.cri_msssim = cri_msssim_cls(**train_opt['msssim_opt']).to(self.device)
+        else:
+            self.cri_msssim = None
 
         # set up optimizers and schedulers
         self.setup_optimizers()
@@ -171,7 +188,8 @@ class ImageCleanModel(BaseModel):
     def optimize_parameters(self, current_iter):
         self.optimizer_g.zero_grad()
 
-        with autocast(enabled=self.use_amp):
+        device_type = 'cuda' if self.device.type == 'cuda' else 'cpu'
+        with autocast(device_type, enabled=self.use_amp):
             preds = self.net_g(self.lq)
             if not isinstance(preds, list):
                 preds = [preds]
@@ -179,14 +197,33 @@ class ImageCleanModel(BaseModel):
             self.output = preds[-1]
 
             loss_dict = OrderedDict()
-            # pixel loss
-            l_pix = 0.
-            for pred in preds:
-                l_pix += self.cri_pix(pred, self.gt) #此处统计batch的loss
+            
+            # When using MS-SSIM Mix Loss (paper: α*L1 + (1-α)*(1-MS_SSIM))
+            # Apply the mix loss only to final output to maintain proper weighting
+            if self.cri_msssim:
+                # Mix Loss: α*L1 + (1-α)*(1-MS_SSIM) for final output only
+                l_pix = self.cri_pix(self.output, self.gt)
+                l_msssim = self.cri_msssim(self.output, self.gt)
+                l_total = l_pix + l_msssim  # Weights sum to 1.0 (0.84 + 0.16)
+                
+                loss_dict['l_pix'] = l_pix
+                loss_dict['l_msssim'] = l_msssim
+            else:
+                # Standard L1 loss for all predictions (used in baseline)
+                l_pix = 0.
+                for pred in preds:
+                    l_pix += self.cri_pix(pred, self.gt)
+                
+                loss_dict['l_pix'] = l_pix
+                l_total = l_pix
+            
+            # Perceptual loss (independent, can be added to either mode)
+            if self.cri_perceptual:
+                l_percep = self.cri_perceptual(self.output, self.gt)
+                l_total += l_percep
+                loss_dict['l_percep'] = l_percep
 
-            loss_dict['l_pix'] = l_pix
-
-        self.amp_scaler.scale(l_pix).backward()
+        self.amp_scaler.scale(l_total).backward()
         self.amp_scaler.unscale_(self.optimizer_g) # 在梯度裁剪前先unscale梯度
         # l_pix.backward()
 
