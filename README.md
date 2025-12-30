@@ -82,6 +82,11 @@ Training outputs:
 
 Each configuration trains for 150K iterations (~33 hours on RTX 5060 Ti).
 
+After having trained all three of the models, you can also plot the **training loss curve**:
+```bash
+python plot_training_curves.py
+```
+
 ## Testing
 
 Test on LOL v1 test set:
@@ -100,11 +105,6 @@ python test_from_dataset.py --opt ../Options/RetinexFormer_LOL_v1_MSSSIM.yml --w
 ```
 - #### Self-ensemble testing strategy
 We added the self-ensemble strategy in the testing code to derive better results. Just add a `--self_ensemble` action at the end of the above test command to use it.
-
-After having trained all three of the models, you can also plot the training loss curve:
-```bash
-python plot_training_curves.py
-```
 
 ## Results Comparison
 
