@@ -90,28 +90,24 @@ Test on LOL v1 test set:
 cd Enhancement
 
 # Test baseline model
-python test_from_dataset.py --opt ../Options/RetinexFormer_LOL_v1.yml \
-    --weights ../experiments/RetinexFormer_LOL_v1/models/net_g_latest.pth \
-    --dataset LOLv1
+python test_from_dataset.py --opt ../Options/RetinexFormer_LOL_v1.yml --weights ../experiments/RetinexFormer_LOL_v1/models/net_g_latest.pth --dataset LOLv1
 
 # Test perceptual model
-python test_from_dataset.py --opt ../Options/RetinexFormer_LOL_v1_Perceptual.yml \
-    --weights ../experiments/RetinexFormer_LOL_v1_Perceptual/models/net_g_latest.pth \
-    --dataset LOLv1
+python test_from_dataset.py --opt ../Options/RetinexFormer_LOL_v1_Perceptual.yml --weights ../experiments/RetinexFormer_LOL_v1_Perceptual/models/net_g_latest.pth --dataset LOLv1
 
 # Test MS-SSIM model
-python test_from_dataset.py --opt ../Options/RetinexFormer_LOL_v1_MSSSIM.yml \
-    --weights ../experiments/RetinexFormer_LOL_v1_MSSSIM/models/net_g_latest.pth \
-    --dataset LOLv1
+python test_from_dataset.py --opt ../Options/RetinexFormer_LOL_v1_MSSSIM.yml --weights ../experiments/RetinexFormer_LOL_v1_MSSSIM/models/net_g_latest.pth --dataset LOLv1
 ```
+- #### Self-ensemble testing strategy
+We add the self-ensemble strategy in the testing code to derive better results. Just add a `--self_ensemble` action at the end of the above test command to use it.
 
 ## Results Comparison
 
-| Configuration | Loss Function | PSNR (dB) | Notes |
-|--------------|---------------|-----------|-------|
-| Baseline | L1 only | 23.23 | Original RetinexFormer |
-| Perceptual | L1 + Perceptual (0.1) | 24.27 | VGG19 layers: conv3_4, conv4_4, conv5_4 |
-| MS-SSIM | L1 + MS-SSIM Mix (0.84/0.16) | TBD | Following Zhao et al. paper |
+| Configuration | Loss Function | PSNR (dB) | SSIM | Notes |
+|--------------|---------------|-----------|-------|-------|
+| Baseline | L1 only | 25.154 | 0.845 |Original RetinexFormer |
+| Perceptual | L1 + Perceptual (0.1) | 24.406 | 0.860 | VGG19 layers: conv3_4, conv4_4, conv5_4 |
+| MS-SSIM | L1 + MS-SSIM Mix (0.84/0.16) | 24.058 | 0.840 | Following Zhao et al. paper |
 
 *(Results based on LOL v1 test set with 15 test images)*
 
@@ -189,14 +185,13 @@ The MS-SSIM computes multi-scale structural similarity using 5 pyramid levels wi
 │   ├── RetinexFormer_LOL_v1_Perceptual.yml # L1 + Perceptual
 │   └── RetinexFormer_LOL_v1_MSSSIM.yml     # L1 + MS-SSIM Mix
 ├── data/                # Dataset folder (not included in repo)
-├── experiments/         # Training outputs (not included in repo)
-└── pretrained_weights/  # Pretrained models (not included in repo)
+└── experiments/         # Training outputs (not included in repo)
 ```
 
 ## Key Implementation Details
 
 ### Training Optimizations
-- **Batch size**: 16 (optimized for RTX 5060 Ti)
+- **Batch size**: 16
 - **Workers**: 8 with CUDA prefetching
 - **Mixed precision**: Disabled for stability
 - **Progress tracking**: tqdm progress bar added to training loop
@@ -208,7 +203,7 @@ For MS-SSIM Mix Loss, the implementation correctly follows the paper by:
 2. Using normalized weights that sum to 1.0 (α + (1-α) = 1.0)
 3. Computing MS-SSIM on the same prediction as L1 for proper balancing
 
-This differs from the baseline where L1 is applied to all intermediate predictions.
+This differs from the baseline, where L1 is applied to all intermediate predictions.
 
 ## References
 
