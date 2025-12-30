@@ -23,8 +23,8 @@ This repository extends the original RetinexFormer with:
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/tamnd04/CV---Low-Light-Image-Enhancement.git
-cd CV---Low-Light-Image-Enhancement
+git clone https://github.com/tamnd04/Low-Light-Image-Enhancement-Project.git
+cd Low-Light-Image-Enhancement-Project
 ```
 
 2. Create conda environment:
