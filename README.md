@@ -99,7 +99,12 @@ python test_from_dataset.py --opt ../Options/RetinexFormer_LOL_v1_Perceptual.yml
 python test_from_dataset.py --opt ../Options/RetinexFormer_LOL_v1_MSSSIM.yml --weights ../experiments/RetinexFormer_LOL_v1_MSSSIM/models/net_g_latest.pth --dataset LOLv1
 ```
 - #### Self-ensemble testing strategy
-We add the self-ensemble strategy in the testing code to derive better results. Just add a `--self_ensemble` action at the end of the above test command to use it.
+We added the self-ensemble strategy in the testing code to derive better results. Just add a `--self_ensemble` action at the end of the above test command to use it.
+
+After having trained all three of the models, you can also plot the training loss curve:
+```bash
+python plot_training_curves.py
+```
 
 ## Results Comparison
 
